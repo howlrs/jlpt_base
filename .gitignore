@@ -1,0 +1,8 @@
+# Subproject repos (managed independently)
+japanese-app/
+jlpt-app-backend/
+jlpt-app-scripts/
+
+# OS
+.DS_Store
+Thumbs.db
