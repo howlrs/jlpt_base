@@ -14,19 +14,16 @@
 ```
 [Cloudflare]  DNS/CDN
      │
-     ├── jlpt.howlrs.net ──→ [GCS] gs://jlpt.howlrs.net/
-     │                        静的サイトホスティング
-     │                        ※ Next.js 16 (Cloud Run) への移行予定
+     ├── jlpt.howlrs.net ──→ [Cloud Run] frontend
+     │                        Next.js 16 (App Router)
+     │                        asia-northeast1
      │
-     ├── api.jlpt.howlrs.net ──→ [Cloud Run] backend（予定）
-     │                            バックエンドAPI専用サブドメイン
-     │
-     └── backend API ──────→ [Cloud Run] backend
-                              asia-northeast1
-                              https://backend-652691189545.asia-northeast1.run.app
-                                    │
-                                    └──→ [Firestore] (default)
-                                          FIRESTORE_NATIVE / asia-northeast1
+     └── api.jlpt.howlrs.net ──→ [Cloud Run] backend
+                                  Rust Axum API
+                                  asia-northeast1
+                                        │
+                                        └──→ [Firestore] (default)
+                                              FIRESTORE_NATIVE / asia-northeast1
 ```
 
 ## サービス詳細
@@ -54,36 +51,21 @@
 | `PROJECT_ID` | `argon-depth-446413-t0` |
 | `JWT_SECRET` | (設定済み) |
 
-### Cloud Run - frontend（予定）
+### Cloud Run - frontend
 
 | 項目 | 値 |
 |------|-----|
-| サービス名 | `frontend`（予定） |
+| サービス名 | `frontend` |
 | リージョン | `asia-northeast1` |
-| 内容 | Next.js 16 (App Router) のCloud Runホスティング |
-| 移行元 | GCS (`gs://jlpt.howlrs.net/`) |
-| サブドメイン | `jlpt.howlrs.net`（現行GCSから移行予定） |
+| 内容 | Next.js 16 (App Router) |
+| サブドメイン | `jlpt.howlrs.net` |
 
-**備考:** 現在はGCSで静的ホスティング（旧Vite版）しているが、Next.js 16版をCloud Runへ移行予定。バックエンドAPIは `api.jlpt.howlrs.net` サブドメインに分離予定。
-
-### GCS - フロントエンド（現行）
+### GCS - フロントエンド（旧・廃止）
 
 | 項目 | 値 |
 |------|-----|
 | バケット名 | `gs://jlpt.howlrs.net/` |
-| ストレージクラス | STANDARD |
-| メインページ | `index.html` |
-| 404ページ | `index.html` (SPA対応) |
-
-**バケット内容:**
-```
-index.html
-icon.ico
-sitemap.xml
-assets/
-  index-*.js    (11ファイル, Viteビルド出力)
-  index-*.css
-```
+| 状態 | 廃止済み（Cloud Runに移行完了） |
 
 ### Firestore
 
@@ -143,15 +125,7 @@ cd jlpt-app-backend
 gcloud run deploy backend --source . --region=asia-northeast1
 ```
 
-### フロントエンド (GCS - 現行)
-
-```bash
-gcloud config configurations activate jlpt
-# ビルド後
-gsutil -m rsync -r -d dist/ gs://jlpt.howlrs.net/
-```
-
-### フロントエンド (Cloud Run - 予定)
+### フロントエンド (Cloud Run)
 
 ```bash
 gcloud config configurations activate jlpt
