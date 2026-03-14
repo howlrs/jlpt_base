@@ -94,12 +94,20 @@ assets/
 | ロケーション | `asia-northeast1` |
 
 **コレクション:**
-- `questions` - JLPT問題データ
-- `levels` - レベルマスタ
-- `categories` - カテゴリマスタ
+- `questions` - JLPT問題データ（10,481親問題 / 2026-03-14時点）
+  - ドキュメントID: UUID v4
+  - フィールド: id, level_id, level_name, category_id, category_name, sentence, prerequisites, sub_questions[], generated_by
+- `levels` - レベルマスタ（N1〜N5の5件）
+  - ドキュメントID: level_id (1-5)
+  - フィールド: id, name
+- `categories` - カテゴリマスタ（reten=子問題数付き、94件）
+  - ドキュメントID: `{level_id}_{category_id}`
+  - フィールド: level_id, id, name, reten
+- `categories_raw` - カテゴリ生データ（scripts投入用）
+  - ドキュメントID: 自動UUID
+  - フィールド: level_id, id, name
 - `users` - ユーザーデータ
 - `votes` - 問題評価データ
-- `categories_raw` - カテゴリ生データ (scripts投入用)
 
 ## 有効化済みAPI
 
