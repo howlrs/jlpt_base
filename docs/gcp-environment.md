@@ -16,6 +16,10 @@
      │
      ├── jlpt.howlrs.net ──→ [GCS] gs://jlpt.howlrs.net/
      │                        静的サイトホスティング (Vite React PWA)
+     │                        ※ Cloud Run移行予定
+     │
+     ├── api.jlpt.howlrs.net ──→ [Cloud Run] backend（予定）
+     │                            バックエンドAPI専用サブドメイン
      │
      └── backend API ──────→ [Cloud Run] backend
                               asia-northeast1
@@ -50,7 +54,19 @@
 | `PROJECT_ID` | `argon-depth-446413-t0` |
 | `JWT_SECRET` | (設定済み) |
 
-### GCS - フロントエンド
+### Cloud Run - frontend（予定）
+
+| 項目 | 値 |
+|------|-----|
+| サービス名 | `frontend`（予定） |
+| リージョン | `asia-northeast1` |
+| 内容 | Vite React PWAのCloud Runホスティング |
+| 移行元 | GCS (`gs://jlpt.howlrs.net/`) |
+| サブドメイン | `jlpt.howlrs.net`（現行GCSから移行予定） |
+
+**備考:** 現在はGCSで静的ホスティングしているが、Cloud Runへの移行を計画中。バックエンドAPIは `api.jlpt.howlrs.net` サブドメインに分離予定。
+
+### GCS - フロントエンド（現行）
 
 | 項目 | 値 |
 |------|-----|
@@ -119,10 +135,18 @@ cd jlpt-app-backend
 gcloud run deploy backend --source . --region=asia-northeast1
 ```
 
-### フロントエンド (GCS)
+### フロントエンド (GCS - 現行)
 
 ```bash
 gcloud config configurations activate jlpt
 # ビルド後
 gsutil -m rsync -r -d dist/ gs://jlpt.howlrs.net/
+```
+
+### フロントエンド (Cloud Run - 予定)
+
+```bash
+gcloud config configurations activate jlpt
+cd jlpt-app-frontend
+gcloud run deploy frontend --source . --region=asia-northeast1
 ```
