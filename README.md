@@ -7,15 +7,21 @@ JLPT（日本語能力試験）[非公式] 対策学習アプリ
 
 ## リポジトリ構成
 
-本プロジェクトは役務・責務別に3つのリポジトリで構成される。
+本プロジェクトは役務・責務別に4つのリポジトリで構成される。
 
 | リポジトリ | 役割 | 技術 | ドキュメント |
 |-----------|------|------|-------------|
 | [japanese-app](./japanese-app/) | 問題生成スクリプト（初期版） | Rust + Gemini API | [docs](./japanese-app/docs/) |
+| [jlpt-app-frontend](./jlpt-app-frontend/) | フロントエンド | Next.js 16 + Tailwind CSS | [docs](./jlpt-app-frontend/docs/) |
 | [jlpt-app-backend](./jlpt-app-backend/) | バックエンドAPI | Rust Axum + Firestore | [docs](./jlpt-app-backend/docs/) |
 | [jlpt-app-scripts](./jlpt-app-scripts/) | データパイプライン（本番版） | Rust + Gemini API + Firestore | [docs](./jlpt-app-scripts/docs/) |
 
 ## 各リポジトリの詳細
+
+### jlpt-app-frontend
+Next.js 16 (App Router) + Tailwind CSSで構築されたJLPT学習アプリのフロントエンド。クイズUI、ユーザー学習履歴・弱点分析、管理者ダッシュボード（投票レビュー、カバレッジマップ）を提供する。Google Cloud Runにデプロイ。
+
+-> [ドキュメント](./jlpt-app-frontend/docs/README.md)
 
 ### japanese-app
 Google Gemini APIを利用してJLPT問題をJSON形式で自動生成するスクリプト群。N2/N3レベルに対応した初期版。問題生成→ファイル結合→構造化パースの3段階パイプライン。
