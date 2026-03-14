@@ -15,8 +15,8 @@
 [Cloudflare]  DNS/CDN
      │
      ├── jlpt.howlrs.net ──→ [GCS] gs://jlpt.howlrs.net/
-     │                        静的サイトホスティング (Vite React PWA)
-     │                        ※ Cloud Run移行予定
+     │                        静的サイトホスティング
+     │                        ※ Next.js 16 (Cloud Run) への移行予定
      │
      ├── api.jlpt.howlrs.net ──→ [Cloud Run] backend（予定）
      │                            バックエンドAPI専用サブドメイン
@@ -60,11 +60,11 @@
 |------|-----|
 | サービス名 | `frontend`（予定） |
 | リージョン | `asia-northeast1` |
-| 内容 | Vite React PWAのCloud Runホスティング |
+| 内容 | Next.js 16 (App Router) のCloud Runホスティング |
 | 移行元 | GCS (`gs://jlpt.howlrs.net/`) |
 | サブドメイン | `jlpt.howlrs.net`（現行GCSから移行予定） |
 
-**備考:** 現在はGCSで静的ホスティングしているが、Cloud Runへの移行を計画中。バックエンドAPIは `api.jlpt.howlrs.net` サブドメインに分離予定。
+**備考:** 現在はGCSで静的ホスティング（旧Vite版）しているが、Next.js 16版をCloud Runへ移行予定。バックエンドAPIは `api.jlpt.howlrs.net` サブドメインに分離予定。
 
 ### GCS - フロントエンド（現行）
 
