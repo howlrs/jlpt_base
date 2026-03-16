@@ -50,6 +50,15 @@
 | `RUST_LOG` | `error` |
 | `PROJECT_ID` | `argon-depth-446413-t0` |
 | `JWT_SECRET` | (設定済み) |
+| `ADMIN_EMAILS` | (設定済み) |
+
+**セキュリティ機能（2026-03-17追加）:**
+- レート制限: signin/signup (5回バースト/IP), evaluate (10回バースト/IP) — tower_governor + SmartIpKeyExtractor
+- セキュリティヘッダー: X-Frame-Options: DENY, X-Content-Type-Options: nosniff, HSTS
+- 入力バリデーション: メール形式・パスワード強度・vote enum型安全化
+- ユーザー列挙防止: 統一エラーメッセージ + ダミーArgon2比較によるタイミング均一化
+- JWT有効期限: 72h → 24h に短縮
+- monitor.rs: JWT_SECRET共有化（空シークレット脆弱性修正）
 
 ### Cloud Run - frontend
 
