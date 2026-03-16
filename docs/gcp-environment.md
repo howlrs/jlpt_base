@@ -59,6 +59,9 @@
 - ユーザー列挙防止: 統一エラーメッセージ + ダミーArgon2比較によるタイミング均一化
 - JWT有効期限: 72h → 24h に短縮
 - monitor.rs: JWT_SECRET共有化（空シークレット脆弱性修正）
+- httpOnly Cookie認証: localStorage廃止、Set-Cookie (HttpOnly, Secure, SameSite=None, Path=/api)
+- 新エンドポイント: /api/auth/me（認証確認）、/api/auth/logout（Cookie クリア）
+- CORS: allow_credentials(true) 追加
 
 ### Cloud Run - frontend
 
