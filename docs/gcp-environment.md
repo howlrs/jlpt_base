@@ -14,17 +14,21 @@
 ```
 [Cloudflare]  DNS/CDN
      │
-     ├── jlpt.howlrs.net ──→ [Cloud Run] frontend
-     │                        Next.js 16 (App Router)
-     │                        asia-northeast1
-     │
-     └── api.jlpt.howlrs.net ──→ [Cloud Run] backend
-                                  Rust Axum API
-                                  asia-northeast1
-                                        │
-                                        └──→ [Firestore] (default)
-                                              FIRESTORE_NATIVE / asia-northeast1
+     └── jlpt.howlrs.net ──→ [Cloud Run] frontend
+                              Next.js 16 (App Router)
+                              asia-northeast1
+                                    │
+                                    │ Next.js rewrites (/api/* → backend)
+                                    ▼
+                              [Cloud Run] backend
+                              Rust Axum API
+                              asia-northeast1
+                                    │
+                                    └──→ [Firestore] (default)
+                                          FIRESTORE_NATIVE / asia-northeast1
 ```
+
+**API通信方式:** フロントエンドのNext.js rewritesにより `/api/*` リクエストをバックエンドにプロキシ。ブラウザから見ると全て `jlpt.howlrs.net` への同一オリジンリクエストとなり、Cookieがファーストパーティとして正常に動作する。
 
 ## サービス詳細
 
@@ -39,7 +43,6 @@
 | メモリ | 128Mi |
 | 最大インスタンス | 2 |
 | スタートアップCPUブースト | 有効 |
-| 現行リビジョン | `backend-00019-69m` |
 | イメージ | `asia-northeast1-docker.pkg.dev/argon-depth-446413-t0/cloud-run-source-deploy/backend` |
 
 **環境変数:**
@@ -52,17 +55,6 @@
 | `JWT_SECRET` | (設定済み) |
 | `ADMIN_EMAILS` | (設定済み) |
 
-**セキュリティ機能（2026-03-17追加）:**
-- レート制限: signin/signup (5回バースト/IP), evaluate (10回バースト/IP) — tower_governor + SmartIpKeyExtractor
-- セキュリティヘッダー: X-Frame-Options: DENY, X-Content-Type-Options: nosniff, HSTS
-- 入力バリデーション: メール形式・パスワード強度・vote enum型安全化
-- ユーザー列挙防止: 統一エラーメッセージ + ダミーArgon2比較によるタイミング均一化
-- JWT有効期限: 72h → 24h に短縮
-- monitor.rs: JWT_SECRET共有化（空シークレット脆弱性修正）
-- httpOnly Cookie認証: localStorage廃止、Set-Cookie (HttpOnly, Secure, SameSite=None, Path=/api)
-- 新エンドポイント: /api/auth/me（認証確認）、/api/auth/logout（Cookie クリア）
-- CORS: allow_credentials(true) 追加
-
 ### Cloud Run - frontend
 
 | 項目 | 値 |
@@ -70,14 +62,14 @@
 | サービス名 | `frontend` |
 | リージョン | `asia-northeast1` |
 | 内容 | Next.js 16 (App Router) |
-| サブドメイン | `jlpt.howlrs.net` |
+| ドメイン | `jlpt.howlrs.net` |
+| API プロキシ | Next.js rewrites で `/api/*` → backend URL |
 
-### GCS - フロントエンド（旧・廃止）
+**環境変数:**
 
-| 項目 | 値 |
+| 変数 | 値 |
 |------|-----|
-| バケット名 | `gs://jlpt.howlrs.net/` |
-| 状態 | 廃止済み（Cloud Runに移行完了） |
+| `NEXT_PUBLIC_API_URL` | `https://backend-652691189545.asia-northeast1.run.app` |
 
 ### Firestore
 
@@ -88,20 +80,72 @@
 | ロケーション | `asia-northeast1` |
 
 **コレクション:**
-- `questions` - JLPT問題データ（10,481親問題 / 2026-03-14時点）
+- `questions` - JLPT問題データ
   - ドキュメントID: UUID v4
   - フィールド: id, level_id, level_name, category_id, category_name, sentence, prerequisites, sub_questions[], generated_by
+  - 複合インデックス: `level_id` (ASC) + `category_id` (ASC)
 - `levels` - レベルマスタ（N1〜N5の5件）
   - ドキュメントID: level_id (1-5)
   - フィールド: id, name
-- `categories` - カテゴリマスタ（reten=子問題数付き、94件）
-  - ドキュメントID: `{level_id}_{category_id}`
+- `categories` - カテゴリマスタ（reten=子問題数付き）
+  - ドキュメントID: UUID
   - フィールド: level_id, id, name, reten
-- `categories_raw` - カテゴリ生データ（scripts投入用）
-  - ドキュメントID: 自動UUID
-  - フィールド: level_id, id, name
 - `users` - ユーザーデータ
+  - ドキュメントID: email
+  - フィールド: id, user_id, email, password(hashed), ip, language, country, created_at
+- `user_answers` - 不正解回答履歴
+  - ドキュメントID: `{user_id}_{question_id}_{sub_question_id}`（決定的ID、重複防止）
+  - フィールド: id, user_id, question_id, sub_question_id, level_id, category_name, selected_answer, correct_answer, is_correct, answered_at
+  - 複合インデックス: `user_id` (ASC) + `answered_at` (DESC)
+- `user_stats` - ユーザー別統計（レベル・カテゴリ別正答率）
+  - ドキュメントID: user_id
 - `votes` - 問題評価データ
+  - フィールド: id, vote, where_to, parent_id, child_id, created_at
+
+## セキュリティ構成
+
+### 認証・認可
+
+| 項目 | 内容 |
+|------|------|
+| 認証方式 | httpOnly Cookie (JWT) |
+| Cookie属性 | `HttpOnly; Secure; SameSite=Lax; Path=/api; Max-Age=86400` |
+| JWT有効期限 | 24時間 |
+| パスワードハッシュ | Argon2id |
+| 管理者判定 | `ADMIN_EMAILS` 環境変数（カンマ区切り） |
+
+**認証エンドポイント:**
+- `POST /api/signin` — ログイン + Cookie設定
+- `GET /api/auth/me` — 認証状態確認
+- `POST /api/auth/logout` — Cookie クリア
+
+**認証フロー:**
+1. ブラウザ → `jlpt.howlrs.net/api/signin` (同一オリジン)
+2. Next.js rewrites → backend (Set-Cookie レスポンス)
+3. ブラウザがCookieを `jlpt.howlrs.net` ドメインに保存（ファーストパーティ）
+4. 以降のAPIリクエストで自動送信
+
+### セキュリティ対策
+
+| 対策 | 内容 |
+|------|------|
+| レート制限 | tower_governor + SmartIpKeyExtractor（signin/signup: 5バースト, evaluate: 10バースト） |
+| セキュリティヘッダー | X-Frame-Options: DENY, X-Content-Type-Options: nosniff, HSTS |
+| 入力バリデーション | メール形式、パスワード8〜128文字、vote enum型安全化 |
+| ユーザー列挙防止 | 統一エラーメッセージ + ダミーArgon2比較によるタイミング均一化 |
+| CORS | 単一オリジン + allow_credentials(true) |
+| monitor.rs | JWT_SECRET を claim.rs の定数から参照（空シークレット脆弱性修正済み） |
+
+## パフォーマンス
+
+| エンドポイント | 応答時間 | 備考 |
+|---------------|---------|------|
+| `/api/public/health` | ~0.31s | ネットワーク往復のみ |
+| `/api/meta` | ~0.44s | Firestore 2コレクション読み取り |
+| `/api/level/*/categories/*/questions` | ~0.45-0.60s | Firestore複合インデックス使用 |
+| 管理API群 | ~0.30s | ネットワーク往復のみ |
+
+問題取得は複合インデックス（`level_id` + `category_id`）を活用し、レベル全問題取得からカテゴリ直接フィルタに最適化済み。
 
 ## 有効化済みAPI
 
@@ -112,20 +156,6 @@
 | `storage.googleapis.com` | Cloud Storage |
 | `cloudbuild.googleapis.com` | Cloud Build (Cloud Runデプロイ時) |
 | `artifactregistry.googleapis.com` | Artifact Registry (Dockerイメージ) |
-| `containerregistry.googleapis.com` | Container Registry |
-
-## gcloud 構成
-
-```bash
-# jlpt構成の確認
-gcloud config configurations list
-
-# jlpt構成に切替
-gcloud config configurations activate jlpt
-
-# 確認
-gcloud config list
-```
 
 ## デプロイ手順
 
@@ -134,7 +164,7 @@ gcloud config list
 ```bash
 gcloud config configurations activate jlpt
 cd jlpt-app-backend
-gcloud run deploy backend --source . --region=asia-northeast1
+./deploy.sh
 ```
 
 ### フロントエンド (Cloud Run)
@@ -142,5 +172,5 @@ gcloud run deploy backend --source . --region=asia-northeast1
 ```bash
 gcloud config configurations activate jlpt
 cd jlpt-app-frontend
-gcloud run deploy frontend --source . --region=asia-northeast1
+./deploy.sh
 ```
