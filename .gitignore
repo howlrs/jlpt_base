@@ -4,6 +4,9 @@ jlpt-app-backend/
 jlpt-app-frontend/
 jlpt-app-scripts/
 
+# Worktrees
+.worktrees/
+
 # OS
 .DS_Store
 Thumbs.db
