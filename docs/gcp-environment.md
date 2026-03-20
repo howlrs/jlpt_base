@@ -159,12 +159,14 @@
 
 ## デプロイ手順
 
+各 `deploy.sh` にはプリデプロイチェック（ビルド検証・疎通確認）とポストデプロイヘルスチェックが組み込まれている。
+
 ### バックエンド (Cloud Run)
 
 ```bash
 gcloud config configurations activate jlpt
 cd jlpt-app-backend
-./deploy.sh
+./deploy.sh  # cargo check → デプロイ → /api/meta + /api/questions スモークテスト
 ```
 
 ### フロントエンド (Cloud Run)
@@ -172,5 +174,7 @@ cd jlpt-app-backend
 ```bash
 gcloud config configurations activate jlpt
 cd jlpt-app-frontend
-./deploy.sh
+./deploy.sh  # .env.local確認 → npm run build → バックエンド疎通 → デプロイ → ヘルスチェック
 ```
+
+> **注意:** フロントエンドは `.env.local` に `NEXT_PUBLIC_API_URL` が必要。未設定の場合 `deploy.sh` がエラーで停止する。
