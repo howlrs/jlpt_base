@@ -177,4 +177,29 @@ cd jlpt-app-frontend
 ./deploy.sh  # .env.local確認 → npm run build → バックエンド疎通 → デプロイ → ヘルスチェック
 ```
 
+## 2026-04-19: 既存データ重複対策
+
+本番 Firestore `questions` コレクションの重複を以下の手順で掃除:
+
+1. **バックアップ** — `gs://argon-depth-446413-t0-firestore-backup/backup-20260419-043000` (questions + votes + user_answers、14,905 docs)
+2. **level_name 大文字統一** (`99_normalize_levels`) — 4,992件 ("n1"〜"n5" → "N1"〜"N5")
+3. **dedup レポート生成** (`99_report_duplicates`) — 選択肢セット+正解値+level_id キーで 237 重複グループ・342 sub_questions を削除候補として特定
+4. **dedup 適用** (`99_apply_dedup --execute`) — 162 parents update + 163 parents delete、342 sub_questions 削除。errors=0
+5. **パイプライン再発防止** — `bin/2_duplicate.rs` の dedup_key を選択肢セット込みに改修、`bin/dedup_common.rs` を共通ヘルパーとして抽出
+
+**最終状態**: total_parents 14,857 → 14,694 (-163)、total_sub_questions 21,809 → 21,467 (-342)、removable 0
+
+詳細:
+- 設計: `docs/superpowers/specs/2026-04-19-duplicate-cleanup-design.md`
+- 実装計画: `docs/superpowers/plans/2026-04-19-duplicate-cleanup.md`
+- ブランチ: `feature/dedup-cleanup` (jlpt-app-scripts)
+
+### 残課題 (別Issue化推奨)
+
+推奨優先順位:
+1. **N5 生成プロンプト改善** — 削除候補の46%が N5 (ROI最大)
+2. **category=9 並び替え問題の key==value バグ調査** — 21件
+3. **category=7 に紛れた不正フォーマット** — qid=b1f3dcbe の5件
+4. **管理画面UI (重複監視)** — 継続監視用
+
 > **注意:** フロントエンドは `.env.local` に `NEXT_PUBLIC_API_URL` が必要。未設定の場合 `deploy.sh` がエラーで停止する。
