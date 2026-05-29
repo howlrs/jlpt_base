@@ -52,6 +52,7 @@
 | `FRONTEND_URL` | `https://jlpt.howlrs.net` |
 | `RUST_LOG` | `error` |
 | `PROJECT_ID` | `argon-depth-446413-t0` |
+| `QUESTION_DATASET` | `new_level_20260529_balanced10x` |
 | `JWT_SECRET` | (設定済み) |
 | `ADMIN_EMAILS` | (設定済み) |
 
